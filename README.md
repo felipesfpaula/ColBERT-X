@@ -86,6 +86,16 @@ python -m colbert.scripts.search \
 --experiment test
 ```
 
+### PLAID SHIRTTT Indexing
+
+For replicating PLAID SHIRTTT experiments, we have released the 
+[date of each document in NeuCLIR1 and ClueWeb09 on Huggingface](https://huggingface.co/datasets/hltcoe/plaid-shirttt-doc-date). 
+To combine the ranks lists from each shard, you can use the following utility script to do so. 
+
+```bash
+python -m colbert.scripts.shirttt_utils --input {ranking files from each shard} --output {file to write} --topn 50 
+```
+
 ## Citation and Credit
 
 Please cite the following paper if you use the CLIR generalization of ColBERT.
@@ -118,5 +128,15 @@ Please cite the following paper if you use the PLAID-X updated implemention or t
   booktitle = {Proceedings of the 46th European Conference on Information Retrieval (ECIR)},
   year = {2024},
   url = {https://arxiv.org/abs/2401.04810}
+}
+```
+
+Please cite the following paper if you use PLAID SHIRTTT. 
+```bibtex
+@inproceedings{sigir2024shirttt,
+  author = {Dawn Lawrie and and Efsun Kayi and Eugene Yang and James Mayfield and Douglas W. Oard},
+  title = {PLAID SHIRTTT for Large-Scale Streaming Dense Retrieval},
+  booktitle = {Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR ’24)},
+  year = {2024}
 }
 ```
