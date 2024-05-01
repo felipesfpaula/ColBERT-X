@@ -44,6 +44,9 @@ python -m colbert.scripts.train \
 --experiment test
 ```
 
+For training MLIR models using Multilingual Translate-Distill, pass more multiple dataset ids to `--training_irds_id` flag along with a `--training_collection_mixing` for the mixing strategies (one of `entries`, `passages`, or `round-robin`). 
+For more details, please read our paper **Distillation for Multilingual Information Retrieval**(arxiv link TBD).
+
 ### Indexing 
 
 Since PLAID-X is a passage retrieval engine, you need to create passage collections if you are intended to search a document collection.
@@ -131,10 +134,20 @@ Please cite the following paper if you use the PLAID-X updated implemention or t
 }
 ```
 
+Please cite the following paper if you use **Multilingual Translate-Distill** to train MLIR model. 
+```bibtex
+@inproceedings{sigir2024shirttt,
+  author = {Eugene Yang and Dawn Lawrie and James Mayfield},
+  title = {Distillation for Multilingual Information Retrieval},
+  booktitle = {Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR ’24)},
+  year = {2024}
+}
+```
+
 Please cite the following paper if you use PLAID SHIRTTT. 
 ```bibtex
 @inproceedings{sigir2024shirttt,
-  author = {Dawn Lawrie and and Efsun Kayi and Eugene Yang and James Mayfield and Douglas W. Oard},
+  author = {Dawn Lawrie and Efsun Kayi and Eugene Yang and James Mayfield and Douglas W. Oard},
   title = {PLAID SHIRTTT for Large-Scale Streaming Dense Retrieval},
   booktitle = {Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval (SIGIR ’24)},
   year = {2024}

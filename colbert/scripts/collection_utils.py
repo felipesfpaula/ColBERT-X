@@ -5,6 +5,7 @@ import gzip
 import pickle
 import json
 from time import time
+import random
 import re
 from tqdm import tqdm
 
@@ -14,7 +15,9 @@ from colbert.data import Queries, Collection, Examples
 
 from huggingface_hub import hf_hub_download
 from huggingface_hub.utils import EntryNotFoundError
+
 import ir_datasets as irds
+import ir_measures as irms
 
 import logging
 
@@ -173,16 +176,95 @@ def _load_single_collection(c: Union[str, Collection], use_offsetmap: bool=False
     return Collection.cast(c)
 
 
-def load_irds_or_local(ds: str, component: str, mixing='elements', use_offsetmap=False) -> Union[Examples, Collection, Examples, str]:
+class MutliCollections(Collection):
+    def __init__(self, children, mixing='elements', load_now=False, use_offsetmap=False):
+        self.children = children
+        self.loaded = False
+        if load_now:
+            self.load_all_collections()
+
+        assert mixing in ['entries', 'elements', 'all']
+        self.strategy = mixing
+        print_message(f"Using {len(self.children)} collections with {self.strategy} mixing strategy.")
+
+        self.use_offsetmap = use_offsetmap
+    
+
+    def load_all_collections(self):
+        self.children = [ _load_single_collection(c, self.use_offsetmap) for c in self.children ]
+        assert all([ len(self.children[0]) == len(c) for c in self.children ])
+        self.loaded = True
+
+    def _choice(self, options):
+        # TODO: could be fancier
+        return random.choice(options)
+
+    def __getitem__(self, item):
+        assert self.loaded
+
+        # TODO: might need some checking
+        if self.strategy == 'entries':
+            assert isinstance(item, list)
+            return self._choice(self.children)[item]
+
+        elif self.strategy == 'elements':
+            if not isinstance(item, list):
+                return self._choice(self.children)[item]
+            return [ self._choice(self.children)[i] for i in item ]
+        
+        elif self.strategy == 'all':
+            selected = [ c[item] for c in self.children ]
+            if not isinstance(item, list):
+                return selected
+            # change to [ [i1l1, i1l2, ...], [i2l1, i2l2, ...] ]
+            return list(map(list, zip(*selected))) # transpose
+
+        raise ValueError(f"strategy {self.strategy} not supported.")
+        # return self._choice([ c[item] for c in self.children ])
+
+    def __iter__(self):
+        if self.strategy == 'elements':
+            yield from map(self._choice, zip(*self.children))
+        elif self.strategy == 'all':
+            yield from map(list, zip(*self.children))
+
+        raise ValueError(f"strategy {self.strategy} not supported.")
+
+    def __len__(self):
+        return len(self.children[0])
+
+    def provenance(self):
+        return f"Combination({self.strategy})[{'+'.join([ c.provenance() if isinstance(c, Collection) else str(c) for c in self.children ])}]"
+
+
+def load_irds_or_local(ds: Union[List[str],str], component: str, mixing='elements', use_offsetmap=False) -> Union[Examples, Collection, Examples, str]:
+    if isinstance(ds, list):
+        if len(ds) > 1:
+            # TODO: support queries or even examples
+            return MutliCollections([load_irds_or_local(d, component) for d in ds], mixing, use_offsetmap=use_offsetmap)
+        ds = ds[0]
+
     if ds in irds.registry:
         print_message(f"Use IRDS:{ds} for {component}")
+        if component == 'qrels':
+            return list(irds.load(ds).qrels_iter())
         return _component_cls_map[component](data=_irds_wrapper(ds, component), path=f"irds:{ds}:{component}")
     else:
-        print_message(f"Use local file (or hfhub if applicable):{ds} for {component}")
-        # assert Path(ds).exists(), f"File {ds} does not exists."
+        print_message(f"Use local file:{ds} for {component}")
+        assert Path(ds).exists(), f"File {ds} does not exists."
+
+        if component == 'qrels':
+            return list(irms.read_trec_qrels())
 
         # avoid materialize it in the main process if using raw file
-        return _load_single_collection(ds, use_offsetmap=True) if use_offsetmap else ds
+        if component == "docs":
+            return _load_single_collection(ds, use_offsetmap=True) if use_offsetmap else ds
+        return _component_cls_map[component](path=ds)
+
+def irds_contains(ds: Union[List[str], str], component: str):
+    if isinstance(ds, list):
+        return [ irds_contains(d, component) for d in ds ]
+    return ds in irds.registry and irds.load(ds).has(component)
 
 
 def _offsetmap_cache_cli(args):

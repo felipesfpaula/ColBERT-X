@@ -2,13 +2,12 @@ import argparse
 from pathlib import Path
 from typing import Dict, List, Tuple
 from colbert.infra import Run, RunConfig, ColBERTConfig
-from colbert.data.queries import Queries
 from colbert import Searcher
 
 from tqdm.auto import tqdm
 
 import ir_measures as irms
-from colbert.scripts.collection_utils import load_mapping
+from colbert.scripts.collection_utils import load_mapping, load_irds_or_local, irds_contains
 
 def maxp(passage_triples: List[Tuple[str, int, float]], mapping: Dict[str, str]) -> Dict[str, float]:
     doc_score = {}
@@ -30,12 +29,12 @@ def main(args):
         print(f"Found {output_fn} -- skip")
         return
 
-    queries = Queries(path=args.query_file)
+    queries = load_irds_or_local(args.queries, component='queries', use_offsetmap=False)
     mapping = load_mapping(args.passage_mapping, is_dummy=not args.maxp)
 
     if args.run_evel:
         metrics = [ irms.parse_measure(m) for m in args.metrics ]
-        qrels = list(irms.read_trec_qrels(args.qrel))
+        qrels = load_irds_or_local(args.qrels, component='qrels')
 
     with Run().context(RunConfig(nranks=args.n_gpus, root=args.root, experiment=args.experiment, index_root=args.index_root)):
         checkpoint = None
@@ -62,7 +61,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--index_name', help="name of the index", type=str)
     parser.add_argument('--passage_mapping', help="mapping tsv file from passage to documents", type=str)
-    parser.add_argument('--query_file', help="query tsv file", type=str)
+    parser.add_argument('--query_file', '--query', '--queries', dest='queries', help="query tsv file or irds", type=str, required=True)
     parser.add_argument('--search_depth', help="k; depth of PLAID search", type=int, default=2500)
     parser.add_argument('--centroid_score_threshold', help="threshold for centroid cell filter", type=float, default=0.4)
 
@@ -71,7 +70,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--metrics', help="evalutation metrics used after search, should be parsable by ir_measures", 
                         type=str, nargs='*', default=[])
-    parser.add_argument('--qrel', help="path to qrels file", type=str, default=None)
+    parser.add_argument('--qrel', '--qrels', dest='qrels', help="path to qrels file", type=str, default=None)
 
     parser.add_argument('--run_id', help="name of this run, will be used for the filename of the trec file", type=str, default=None)
     parser.add_argument('--output', help="output directory of the trec file", type=str, default=None)
@@ -95,13 +94,16 @@ if __name__ == '__main__':
         args.n_gpus = torch.cuda.device_count()
     
     if len(args.metrics) > 0:
-        assert args.qrel and Path(args.qrel).exists(), args.qrel
+        if args.qrels is None and irds_contains(args.queries, 'qrels'):
+            args.qrels = args.queries
+
+        assert args.qrels and (Path(args.qrels).exists() or irds_contains(args.qrels, 'qrels')), args.qrels
         args.run_evel = True
 
-    assert Path(args.query_file).exists(), args.query_file
+    assert Path(args.queries).exists() or irds_contains(args.queries, 'queries'), args.queries
 
     if args.run_id is None:
-        args.run_id = f"{args.experiment}.{args.index_name}.{Path(args.query_file).name}"
+        args.run_id = f"{args.experiment}.{args.index_name}.{Path(args.queries).name}"
         args.run_id = args.run_id.replace('/', '.')
 
     main(args)

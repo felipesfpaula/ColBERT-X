@@ -20,8 +20,9 @@ def create_plaid_index(args):
         max_sampled_pid=args.max_sampled_pid, max_num_partitions=args.max_num_partitions
     )
 
+    coll_file = str(os.path.join(args.coll_dir, 'collection_passages.tsv')) if os.path.isdir(args.coll_dir) else args.coll_dir
     collection = load_irds_or_local(
-        args.dataset_name if args.coll_dir is None else str(os.path.join(args.coll_dir, 'collection_passages.tsv')),
+        args.dataset_name if args.coll_dir is None else coll_file,
         component='docs', use_offsetmap=args.lazy_collection_loader
     )
     dataset_name = args.dataset_name.replace('/', '.')
