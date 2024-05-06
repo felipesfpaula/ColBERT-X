@@ -1,3 +1,5 @@
+This is the alpha branch for changing the namespace of the package from `colbert` to `plaidx`. 
+
 # PLAID-X
 
 This is a generalized version of [PLAID](https://github.com/stanford-futuredata/ColBERT) and the previous ColBERT-X for CLIR.
