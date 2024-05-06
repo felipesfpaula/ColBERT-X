@@ -1,6 +1,6 @@
-include colbert/indexing/codecs/*.cpp
-include colbert/indexing/codecs/*.cu
-include colbert/indexing/codecs/*.cu
-include colbert/modeling/*.cpp
-include colbert/search/*.cpp
+include plaidx/indexing/codecs/*.cpp
+include plaidx/indexing/codecs/*.cu
+include plaidx/indexing/codecs/*.cu
+include plaidx/modeling/*.cpp
+include plaidx/search/*.cpp
 include requirements.txt

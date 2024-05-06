@@ -32,7 +32,7 @@ The following provides a series of CLI commands for running a larger scale.
 The following command starts the training process using the `t53b-monot5-msmarco-engeng.jsonl.gz` triple file on the Huggingface Dataset repository [`hltcoe/tdist-msmarco-scores`](https://huggingface.co/datasets/hltcoe/tdist-msmarco-scores) with English queries and translated Chinese passages from [neuMARCO](https://ir-datasets.com/neumarco.html).
 
 ```bash
-python -m colbert.scripts.train \
+python -m plaidx.scripts.train \
 --model_name xlm-roberta-large \
 --training_triples hltcoe/tdist-msmarco-scores:t53b-monot5-msmarco-engeng.jsonl.gz \
 --training_irds_id neumarco/zh/train \
@@ -55,7 +55,7 @@ Since PLAID-X is a passage retrieval engine, you need to create passage collecti
 The following command creates a passage collection for the NeuCLIR1 Chinese corpus (file implicitly downloaded from Huggingface). 
 
 ```bash
-python -m colbert.scripts.collection_utils create_passage_collection \
+python -m plaidx.scripts.collection_utils create_passage_collection \
 --root ./test_coll/ --corpus neuclir/neuclir1:data/zho-00000-of-00001.jsonl.gz
 ```
 
@@ -65,7 +65,7 @@ Separating the steps provides better allocation for the computation resources an
 
 ```bash
 for step in prepare encode finalize; do
-python -m colbert.scripts.index \
+python -m plaidx.scripts.index \
 --coll_dir ./test_coll \
 --index_name test_index \
 --dataset_name test_coll \
@@ -82,7 +82,7 @@ Note that the `--checkpoint` flag accept ColBERT-X and ColBERT models stored on 
 Finally, the following command searches the collection with a query `.tsv` file where the first column is the query id and the second column contains the query text. 
 
 ```bash
-python -m colbert.scripts.search \
+python -m plaidx.scripts.search \
 --index_name neuclir-zho.1bits \
 --passage_mapping ./test_coll/mapping.tsv \
 --query_file query.tsv \
@@ -98,7 +98,7 @@ For replicating PLAID SHIRTTT experiments, we have released the
 To combine the ranks lists from each shard, you can use the following utility script to do so. 
 
 ```bash
-python -m colbert.scripts.shirttt_utils --input {ranking files from each shard} --output {file to write} --topn 50 
+python -m plaidx.scripts.shirttt_utils --input {ranking files from each shard} --output {file to write} --topn 50 
 ```
 
 ## Citation and Credit

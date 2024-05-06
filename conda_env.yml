@@ -1,4 +1,4 @@
-name: plaid
+name: plaidx
 channels:
   - pytorch
   - nvidia
