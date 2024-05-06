@@ -1,4 +1,4 @@
-__version__ = "0.3.1a0"
+__version__ = "0.4.0a0"
 
 from .trainer import Trainer
 from .indexer import Indexer
