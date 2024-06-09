@@ -21,15 +21,15 @@ import ir_measures as irms
 
 import logging
 
-_component_cls_map: Dict[str, Union[Examples, Queries, Collection]] = { 
-    'docpairs': Examples, 'queries': Queries, 'docs': Collection 
+_component_cls_map: Dict[str, Union[Examples, Queries, Collection]] = {
+    'docpairs': Examples, 'queries': Queries, 'docs': Collection
 }
 
 
 def load_mapping(f: str, is_dummy: bool=False) -> Dict[int, str]:
-    return { 
+    return {
         int(pid): "_".join(tag.split("_")[:-1]) if not is_dummy else tag
-        for pid, tag in map(lambda l: l.strip().split("\t"), open(f)) 
+        for pid, tag in map(lambda l: l.strip().split("\t"), open(f))
     }
 
 
@@ -45,7 +45,7 @@ class _irds_wrapper:
         self.component = component
 
         self.id_key = 'doc_id' if component == 'docs' else 'query_id'
-    
+
     @property
     def data(self):
         return getattr(irds.load(self.dsid), self.component)
@@ -60,13 +60,13 @@ class _irds_wrapper:
         if isinstance(i, int):
             i = str(i)
         return self._process(self.data.lookup(i))
-    
+
     def __iter__(self):
         return map(self._process, iter(self.data))
 
     def __len__(self):
         return len(self.data)
-    
+
     def items(self):
         yield from ( (self._get_id(d), self._process(d)) for d in self.data )
 
@@ -83,9 +83,9 @@ class OffsetMapCollection(Collection):
         else:
             self.length = self._count_num_lines()
             self.path, self.mapping = None, None
-        
+
         self._reader = None
-    
+
     def _get_opener(self):
         return (gzip.open if self.collection_path.endswith('.gz') else open)
 
@@ -102,7 +102,7 @@ class OffsetMapCollection(Collection):
     def _load_offset_map(self, offsetmap_path: str, collection_path: str):
         if not offsetmap_path:
             return None
-        
+
         target_path, mapping =  pickle.load(open(offsetmap_path, 'rb'))
         assert Path(target_path).absolute() == Path(collection_path).absolute(), f"Mapping was built for {target_path} not {collection_path}."
         return str(offsetmap_path), mapping
@@ -117,7 +117,7 @@ class OffsetMapCollection(Collection):
             return self._load_offset_map(offsetmap_path, collection_path)
 
         mapping = []
-        
+
         # explicitly avoid touching self.reader
         with self._get_opener()(self.collection_path, 'rt') as fr:
             for i, _ in enumerate(easy_pbar(desc='building offset map', disabled=False, use_tqdm=True)): # while True
@@ -127,22 +127,22 @@ class OffsetMapCollection(Collection):
                     break
                 assert int(line.split('\t')[0]) == i
                 mapping.append(loc)
-        
+
         print(f"> Writing offset map to {offsetmap_path}")
         with open(offsetmap_path, 'wb') as fw:
             pickle.dump((str(collection_path), mapping), fw)
             fw.flush()
-        
+
         return offsetmap_path, mapping
 
     def _parse_line(self, line: str):
         pid, passage, *rest = line.strip('\n\r ').split('\t')
         return (rest[0] + ' | ' + passage) if len(rest) >= 1 else passage
-        
+
     def __iter__(self):
         self.reader.seek(0)
         yield from map(
-            self._parse_line, 
+            self._parse_line,
             easy_pbar(self.reader, desc="reading collection on-the-fly", disabled=Run().config.rank != 0)
             # one process displaying the progress would be enough
         )
@@ -158,7 +158,7 @@ class OffsetMapCollection(Collection):
 
     def __len__(self):
         return self.length
-    
+
     def save(self, new_path):
         raise NotImplementedError(f"Offset map collection is not meant to be stored. ")
 
@@ -169,7 +169,7 @@ def _load_single_collection(c: Union[str, Collection], use_offsetmap: bool=False
         p = Path(c)
         if (p.parent / f"{p.name}.offsetmap").exists():
             return OffsetMapCollection(
-                collection_path=c, 
+                collection_path=c,
                 offsetmap_path=str(p.parent / f"{p.name}.offsetmap"),
                 config=None
             )
@@ -188,7 +188,7 @@ class MutliCollections(Collection):
         print_message(f"Using {len(self.children)} collections with {self.strategy} mixing strategy.")
 
         self.use_offsetmap = use_offsetmap
-    
+
 
     def load_all_collections(self):
         self.children = [ _load_single_collection(c, self.use_offsetmap) for c in self.children ]
@@ -211,7 +211,7 @@ class MutliCollections(Collection):
             if not isinstance(item, list):
                 return self._choice(self.children)[item]
             return [ self._choice(self.children)[i] for i in item ]
-        
+
         elif self.strategy == 'all':
             selected = [ c[item] for c in self.children ]
             if not isinstance(item, list):
@@ -281,7 +281,7 @@ def _process_documents(args):
         except EntryNotFoundError:
             raise FileNotFoundError(f"`{args.corpus}` does not exist on disk nor Huggingface Hub")
 
-    opener = gzip.open if args.corpus.endswith('.gz') else open
+    opener = gzip.open if str(args.corpus).endswith('.gz') else open
     num_docs = sum(1 for _ in tqdm(opener(args.corpus, 'rt'), desc='counting'))
     with opener(args.corpus, 'rt') as f:
         for i, line in tqdm(enumerate(f), total=num_docs):
@@ -311,7 +311,7 @@ def _process_documents(args):
 
 def _create_passage_collection_cli(args):
     from transformers import AutoTokenizer
-    logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR) 
+    logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR)
 
     root: Path = args.root
     if not root.exists():
@@ -319,7 +319,7 @@ def _create_passage_collection_cli(args):
     args.tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     pass_file= root / "collection_passages.tsv"
     map_file = root / "mapping.tsv"
-    
+
     with open(pass_file, "w") as f, open(map_file, "w") as g:
         for idx,(line1,line2) in enumerate(_process_documents(args)):
             f.write(f"{idx}\t{line1}\n")
@@ -328,9 +328,9 @@ def _create_passage_collection_cli(args):
 
 def _merge_teacher_scores(args):
     assert len(args.input_files) > 1, "We can only merge >1 files"
-    
+
     combined = {}
-    
+
     for fn in tqdm(args.input_files, desc="reading file...", dynamic_ncols=True):
         with open(fn) as fr:
             for triple_list in tqdm(map(json.loads, fr), dynamic_ncols=True):
@@ -339,7 +339,7 @@ def _merge_teacher_scores(args):
                 if qid not in combined:
                     combined[qid] = []
                 combined[qid] += triple_list[1:]
-    
+
     with open(args.output_file, "w") as fw:
         for qid, triple_list in tqdm(combined.items(), total=len(combined), desc='writing...'):
             fw.write(json.dumps([qid] + triple_list) + "\n")
@@ -362,7 +362,7 @@ if __name__ == '__main__':
     passaging_parser.add_argument("--docid", type=str, default="id")
     passaging_parser.add_argument("--title", type=str, default="title")
     passaging_parser.add_argument("--body", type=str, default="text")
-    passaging_parser.add_argument("--lower", action="store_true", default=False) 
+    passaging_parser.add_argument("--lower", action="store_true", default=False)
     passaging_parser.add_argument('--tokenizer', type=str, default="xlm-roberta-large")
     passaging_parser.set_defaults(func=_create_passage_collection_cli)
 
