@@ -254,7 +254,7 @@ def load_irds_or_local(ds: Union[List[str],str], component: str, mixing='element
         assert Path(ds).exists(), f"File {ds} does not exists."
 
         if component == 'qrels':
-            return list(irms.read_trec_qrels())
+            return list(irms.read_trec_qrels(ds))
 
         # avoid materialize it in the main process if using raw file
         if component == "docs":
