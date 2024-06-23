@@ -356,7 +356,7 @@ if __name__ == '__main__':
 
     passaging_parser = subparser.add_parser("create_passage_collection")
     passaging_parser.add_argument("--root", type=Path, required=True)
-    passaging_parser.add_argument("--corpus", type=Path, required=True)
+    passaging_parser.add_argument("--corpus", type=str, required=True)
     passaging_parser.add_argument("--length", type=int, default=180)
     passaging_parser.add_argument("--stride", type=int, default=90)
     passaging_parser.add_argument("--docid", type=str, default="id")
